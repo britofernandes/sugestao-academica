@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publications Parser Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffe6e6; color: #cc0000; }
+        .success { background: #e6ffe6; color: #006600; }
+        pre { background: #f0f0f0; padding: 10px; overflow-x: auto; }
+        button { background: #007cba; color: white; border: none; padding: 10px 15px; margin: 5px; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #005a8b; }
+    </style>
+</head>
+<body>
+    <h1>Publications CSV Parser - Test Interface</h1>
+    
+    <div>
+        <button onclick="loadAndParseFile()">Load CSV File</button>
+        <button onclick="testWithSampleData()">Test with Sample Data</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script src="publicationsParser.js"></script>
+    <script>
+        function addResult(title, content, isError = false) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${isError ? 'error' : 'success'}`;
+            resultDiv.innerHTML = `<h3>${title}</h3><pre>${content}</pre>`;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function loadAndParseFile() {
+            try {
+                addResult('Loading...', 'Attempting to load publicacoesPorMembro_.csv');
+                
+                const data = await PublicationsParser.loadPublicationsFromCSV('./publicacoesPorMembro_.csv');
+                
+                // Display statistics
+                addResult('📊 Statistics', JSON.stringify(data.statistics, null, 2));
+                
+                // Display top 5 authors
+                const topAuthors = Object.entries(data.statistics.topAuthors).slice(0, 5);
+                addResult('👥 Top 5 Authors', topAuthors.map(([name, count]) => `${name}: ${count} publications`).join('\n'));
+                
+                // Display sample publications
+                const samplePubs = data.publications.slice(0, 3);
+                addResult('📚 Sample Publications', JSON.stringify(samplePubs, null, 2));
+                
+                // Display authors dictionary structure
+                const firstAuthor = Object.keys(data.byAuthor)[0];
+                if (firstAuthor) {
+                    addResult('👤 Sample Author Data', JSON.stringify(data.byAuthor[firstAuthor], null, 2));
+                }
+                
+                console.log('Full parsed data:', data);
+                
+            } catch (error) {
+                addResult('❌ Error', `Failed to load CSV file: ${error.message}`, true);
+                console.error('Error:', error);
+            }
+        }
+        
+        function testWithSampleData() {
+            const sampleCSV = `Type|Author|Year|Title
+artigoEmPeriodico|João Silva|2023|Inteligência Artificial na Educação
+trabalhoCompletoEmCongresso|Maria Santos|2022|Sustentabilidade em Projetos
+artigoEmPeriodico|João Silva|2021|Machine Learning Applications
+resumoExpandidoEmCongresso|Ana Costa|2023|Innovation in Healthcare`;
+            
+            try {
+                const publications = PublicationsParser.parsePublicationsCSV(sampleCSV);
+                const byAuthor = PublicationsParser.groupByAuthor(publications);
+                const byType = PublicationsParser.groupByType(publications);
+                const stats = PublicationsParser.getPublicationStats(publications);
+                
+                addResult('📄 Sample CSV Parsed', JSON.stringify(publications, null, 2));
+                addResult('👥 Grouped by Author', JSON.stringify(byAuthor, null, 2));
+                addResult('📝 Grouped by Type', JSON.stringify(byType, null, 2));
+                addResult('📊 Statistics', JSON.stringify(stats, null, 2));
+                
+                // Test search functionality
+                const searchResults = PublicationsParser.searchPublications(publications, {
+                    author: 'João',
+                    yearRange: { min: 2020, max: 2023 }
+                });
+                addResult('🔍 Search Results (João, 2020-2023)', JSON.stringify(searchResults, null, 2));
+                
+            } catch (error) {
+                addResult('❌ Error', `Failed to parse sample data: ${error.message}`, true);
+            }
+        }
+        
+        // Auto-load on page load
+        window.addEventListener('load', () => {
+            addResult('ℹ️ Instructions', 
+                'Click "Load CSV File" to parse the actual CSV file, or "Test with Sample Data" to see how the parser works.');
+        });
+    </script>
+</body>
+</html>
