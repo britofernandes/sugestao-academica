@@ -450,10 +450,32 @@
     showNeighborsCheckbox.addEventListener('change', handleFilterChange);
     
     resetButton.addEventListener('click', () => {
+
+      // limpa filtros padrão
       nameFilterInput.value = '';
       colorFilterSelect.value = '';
       showNeighborsCheckbox.checked = true;
-      resetFilters();
+
+      // limpa exclusões da legenda
+      excludedColors.clear();
+
+      // restaura aparência visual da legenda
+      document.querySelectorAll('.legend-item').forEach(item => {
+        item.style.opacity = '1';
+        item.style.textDecoration = 'none';
+      });
+
+      // mostra todos os nós
+      graph.forEachNode((node) => {
+        graph.setNodeAttribute(node, 'hidden', false);
+      });
+
+      // mostra todas as arestas
+      graph.forEachEdge((edge) => {
+        graph.setEdgeAttribute(edge, 'hidden', false);
+      });
+
+      s.refresh();
     });
 
     
