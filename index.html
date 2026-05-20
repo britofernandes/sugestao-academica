@@ -245,63 +245,52 @@
       enableEdgeEvents: true,
       allowInvalidContainer: true,
 
-    //   renderEdgeLabels: true,
-    //   edgeLabelSize: 14,
-    //   edgeLabelColor: { color: '#000000' },
-    //   labelColor: { attribute: 'labelColor' },
-    //   // Enable edge interactions explicitly
-    //   enableEdgeEvents: true,
-    //   allowInvalidContainer: true
-    // });
-
-    // // Enable node dragging functionality
-    // let isDragging = false;
-    // let draggedNode = null;
-
-    // // Mouse down event - start dragging
-    // s.on("downNode", (e) => {
-    //   isDragging = true;
-    //   draggedNode = e.node;
-      
-    //   // Disable camera controls while dragging
-    //   s.getCamera().disable();
-
     });
 
-    // Mouse move event - update node position while dragging
+   let draggedNode = null;
+    let isDragging = false;
+
+    // inicia drag
+    s.on("downNode", (e) => {
+      draggedNode = e.node;
+      isDragging = true;
+    });
+
+    // move nó
     s.getMouseCaptor().on("mousemove", (e) => {
-      if (isDragging && draggedNode) {
-        // Get the mouse position in graph coordinates
-        const pos = s.viewportToGraph(e);
-        
-        // Update the node position
-        graph.setNodeAttribute(draggedNode, "x", pos.x);
-        graph.setNodeAttribute(draggedNode, "y", pos.y);
-        
-        // Prevent default camera behavior
-        e.preventSigmaDefault();
-        e.original.preventDefault();
-        e.original.stopPropagation();
-      }
+
+      // se não estiver arrastando nó,
+      // deixa Sigma controlar o pan normal
+      if (!isDragging || !draggedNode) return;
+
+      const pos = s.viewportToGraph(e);
+
+      graph.setNodeAttribute(draggedNode, "x", pos.x);
+      graph.setNodeAttribute(draggedNode, "y", pos.y);
+
+      // atualiza render
+      e.preventSigmaDefault();
+      e.original.preventDefault();
+      e.original.stopPropagation();
     });
 
-    // Mouse up event - stop dragging
-    s.getMouseCaptor().on("mouseup", () => {
-      if (isDragging) {
-        isDragging = false;
-        draggedNode = null;
-        
-        // Re-enable camera controls
-        s.getCamera().enable();
-      }
-    });
+    // encerra drag
+    const stopDragging = () => {
+      isDragging = false;
+      draggedNode = null;
+    };
 
-    // Handle mouse leave to stop dragging if mouse leaves the container
-    s.getMouseCaptor().on("mouseleave", () => {
-      if (isDragging) {
+    s.getMouseCaptor().on("mouseup", stopDragging);
+    s.getMouseCaptor().on("mouseleave", stopDragging);
+
+    // IMPORTANTE:
+    // permite mover o canvas normalmente
+    s.getMouseCaptor().on("mousedown", (e) => {
+
+      // se clicou fora do nó,
+      // garante que o Sigma possa mover o stage
+      if (!draggedNode) {
         isDragging = false;
-        draggedNode = null;
-        s.getCamera().enable();
       }
     });
 
@@ -343,7 +332,17 @@
         let matches = true;
         
         // Name filter (case-insensitive partial match)
-        if (nameFilter && !attributes.label.toLowerCase().includes(nameFilter.toLowerCase())) {
+       const parts = attributes.label.trim().split(" ");
+
+        const shortLabel =
+          parts.length > 1
+            ? `${parts[0]} ${parts[parts.length - 1]}`
+            : attributes.label;
+
+        if (
+          nameFilter &&
+          !shortLabel.toLowerCase().includes(nameFilter.toLowerCase())
+        ) {
           matches = false;
         }
         
