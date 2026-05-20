@@ -21,23 +21,25 @@ function createNode(graph, name, options = {}) {
         label: name,
         labelColor: options.color || '#999999'
     };
-    
+
     const config = { ...defaults, ...options };
-    
-    // Set labelColor to match color if not explicitly provided
+
     if (!options.labelColor && options.color) {
         config.labelColor = options.color;
     }
-    
+
     const nodeConfig = {
         size: config.size,
         label: config.label,
         type: config.type,
         image: `${config.imageFolder}${name}${config.imageExtension}`,
         color: config.color,
-        labelColor: config.labelColor
+        labelColor: config.labelColor,
+
+        // posição da label
+        labelAlignment: 'bottom'
     };
-    
+
     graph.addNode(name, nodeConfig);
 }
 

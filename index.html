@@ -105,13 +105,94 @@
     import {edgeList} from './js/researchesEdges.js';
     import {filter} from './js/filter.js'; 
 
-    // Create a graphology.js graph, use random to init the graph
+    // criação dos grafos
     const graph = new graphology.Graph()
     
-    // Use the createNodes function to create all nodes from the nodeList
+    // criação node/edges
     createNodes(graph, nodeList);  
     createEdges(graph, edgeList); // Use the createEdges function to create all edges from the edgeList  
     
+    //cria estilo do grafo
+    function drawLabel(context, data, settings) {
+      if (!data.label) return;
+
+      const size = data.size || 10;
+
+      // mantém apenas primeiro + último nome
+      const parts = data.label.trim().split(" ");
+
+      const shortLabel =
+        parts.length > 1
+          ? `${parts[0]} ${parts[parts.length - 1]}`
+          : data.label;
+
+      const fontSize = 13;
+      const paddingX = 10;
+      const paddingY = 6;
+      const gap = 6;
+
+      const font = settings.labelFont || "Arial";
+
+      context.font = `${fontSize}px ${font}`;
+
+      // usa shortLabel
+      const textWidth = context.measureText(shortLabel).width;
+
+      const boxWidth = textWidth + paddingX * 2;
+      const boxHeight = fontSize + paddingY * 2;
+
+      const boxX = data.x - boxWidth / 2;
+      const boxY = data.y + size + gap;
+
+      // sombra
+      context.shadowColor = "rgba(0,0,0,0.10)";
+      context.shadowBlur = 6;
+      context.shadowOffsetX = 0;
+      context.shadowOffsetY = 2;
+
+      // fundo branco
+      context.fillStyle = "#ffffff";
+
+      roundRect(context, boxX, boxY, boxWidth, boxHeight, 8);
+      context.fill();
+
+      // remove sombra do texto
+      context.shadowColor = "transparent";
+
+      // texto
+      context.fillStyle = data.labelColor || "#333333";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+
+      context.fillText(
+        shortLabel,
+        data.x,
+        boxY + boxHeight / 2
+      );
+    }
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+
+      ctx.closePath();
+    }
+
+
+    graph.forEachEdge((edge, attributes) => {
+      graph.setEdgeAttribute(edge, "size", 2);
+    });
     // Apply nooverlap layout to prevent node overlapping
     // First, set random initial positions for the nooverlap algorithm to work with
     graph.nodes().forEach((node) => {
@@ -151,26 +232,40 @@
       nodeProgramClasses: {
         image: NodeImageProgram,        
       },
+      defaultDrawNodeLabel: drawLabel,
+    // remove label lateral no hover
+      defaultDrawNodeHover: () => {},
+
       renderEdgeLabels: true,
       edgeLabelSize: 14,
       edgeLabelColor: { color: '#000000' },
+
       labelColor: { attribute: 'labelColor' },
-      // Enable edge interactions explicitly
+
       enableEdgeEvents: true,
-      allowInvalidContainer: true
-    });
+      allowInvalidContainer: true,
 
-    // Enable node dragging functionality
-    let isDragging = false;
-    let draggedNode = null;
+    //   renderEdgeLabels: true,
+    //   edgeLabelSize: 14,
+    //   edgeLabelColor: { color: '#000000' },
+    //   labelColor: { attribute: 'labelColor' },
+    //   // Enable edge interactions explicitly
+    //   enableEdgeEvents: true,
+    //   allowInvalidContainer: true
+    // });
 
-    // Mouse down event - start dragging
-    s.on("downNode", (e) => {
-      isDragging = true;
-      draggedNode = e.node;
+    // // Enable node dragging functionality
+    // let isDragging = false;
+    // let draggedNode = null;
+
+    // // Mouse down event - start dragging
+    // s.on("downNode", (e) => {
+    //   isDragging = true;
+    //   draggedNode = e.node;
       
-      // Disable camera controls while dragging
-      s.getCamera().disable();
+    //   // Disable camera controls while dragging
+    //   s.getCamera().disable();
+
     });
 
     // Mouse move event - update node position while dragging
@@ -372,11 +467,19 @@
       select.appendChild(option);
     });
 
+    const excludedColors = new Set();
+
     filter.forEach(item => {
       const legendItem = document.createElement("span");
+
       legendItem.classList.add("legend-item");
 
+      legendItem.style.cursor = "pointer";
+      legendItem.style.userSelect = "none";
+      legendItem.style.transition = "0.2s";
+
       const colorBox = document.createElement("span");
+
       colorBox.classList.add("legend-color-box");
       colorBox.style.backgroundColor = item.color;
 
@@ -385,9 +488,59 @@
       legendItem.appendChild(colorBox);
       legendItem.appendChild(text);
 
+      // clique para excluir/incluir
+      legendItem.addEventListener("click", () => {
+
+        if (excludedColors.has(item.color)) {
+          excludedColors.delete(item.color);
+
+          legendItem.style.opacity = "1";
+          legendItem.style.textDecoration = "none";
+
+        } else {
+          excludedColors.add(item.color);
+
+          legendItem.style.opacity = "0.4";
+          legendItem.style.textDecoration = "line-through";
+        }
+
+        applyLegendFilter();
+      });
+
       legendPanel.appendChild(legendItem);
     });
+    function applyLegendFilter() {
 
+      graph.forEachNode((node, attributes) => {
+
+        const hiddenByLegend =
+          excludedColors.has(attributes.color);
+
+        graph.setNodeAttribute(
+          node,
+          "hidden",
+          hiddenByLegend
+        );
+      });
+
+      // esconde arestas ligadas a nós ocultos
+      graph.forEachEdge((edge, attributes, source, target) => {
+
+        const sourceHidden =
+          graph.getNodeAttribute(source, "hidden");
+
+        const targetHidden =
+          graph.getNodeAttribute(target, "hidden");
+
+        graph.setEdgeAttribute(
+          edge,
+          "hidden",
+          sourceHidden || targetHidden
+        );
+      });
+
+      s.refresh();
+    }
     // Add some helpful keyboard shortcuts
     // === PUBLICATIONS DATA AND DIALOG HANDLING ===
     
