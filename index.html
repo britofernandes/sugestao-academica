@@ -466,21 +466,17 @@
       dialog.style.display = 'none';
     }
     
-    // Add dialog close event listeners
     document.getElementById('closeDialog').addEventListener('click', hidePublicationsDialog);
     document.getElementById('dialogOverlay').addEventListener('click', hidePublicationsDialog);
     
-    // Close dialog with Escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         hidePublicationsDialog();
-        // Don't clear name filter if dialog is open
         if (document.getElementById('publicationsDialog').style.display === 'none') {
           nameFilterInput.value = '';
           handleFilterChange();
         }
       }
-      // Press 'R' to reset filters
       if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.altKey) {
         if (document.activeElement !== nameFilterInput) {
           resetButton.click();
@@ -488,9 +484,6 @@
       }
     });
 
-    // === EDGE CLICK DETECTION AND PUBLICATION FILTERING ===
-    
-    // Function to handle edge click and filter publications
     function handleEdgeClick(edgeId) {
       if (publicationsData.length === 0) {
         alert("Dados de publicações ainda não foram carregados. Tente novamente em alguns segundos.");
